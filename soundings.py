@@ -22,6 +22,7 @@ NTFY_URL = os.environ.get("NTFY_URL", "http://127.0.0.1:8888")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "vela")
 PROBE_INTERVAL = int(os.environ.get("PROBE_INTERVAL", "60"))
 FAILURE_THRESHOLD = int(os.environ.get("FAILURE_THRESHOLD", "3"))
+PROBE_INTERVAL_OVERRIDES_RAW = os.environ.get("PROBE_INTERVAL_OVERRIDES", "")
 RECOVERY_NOTIFY = os.environ.get("RECOVERY_NOTIFY", "true").lower() == "true"
 API_PORT = int(os.environ.get("API_PORT", "8591"))
 PROBE_TIMEOUT = int(os.environ.get("PROBE_TIMEOUT", "10"))
@@ -74,11 +75,31 @@ def parse_endpoints(raw):
     return endpoints
 
 
+def parse_interval_overrides(raw):
+    """Parse PROBE_INTERVAL_OVERRIDES into label->seconds dict.
+
+    Format: Label:seconds,Label:seconds,...
+    """
+    overrides = {}
+    if not raw or not raw.strip():
+        return overrides
+    for entry in raw.split(","):
+        entry = entry.strip()
+        if ":" not in entry:
+            continue
+        label, _, seconds = entry.rpartition(":")
+        if seconds.isdigit():
+            overrides[label.strip()] = int(seconds)
+    return overrides
+
+
 class EndpointState:
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, interval=None):
         self.url = endpoint["url"]
         self.label = endpoint["label"]
         self.expected_status = endpoint["expected_status"]
+        self.interval = interval or PROBE_INTERVAL
+        self.last_probed = 0
         self.consecutive_failures = 0
         self.alerted = False
         self.last_status = None
@@ -93,6 +114,7 @@ class EndpointState:
             "url": self.url,
             "label": self.label,
             "expected_status": self.expected_status,
+            "interval": self.interval,
             "status": "ok" if self.consecutive_failures == 0 else "failing",
             "consecutive_failures": self.consecutive_failures,
             "last_http_status": self.last_status,
@@ -224,13 +246,15 @@ def main():
         print("Format: url:label,url:label,...", file=sys.stderr)
         sys.exit(1)
 
-    states = [EndpointState(ep) for ep in endpoints]
+    overrides = parse_interval_overrides(PROBE_INTERVAL_OVERRIDES_RAW)
+    states = [EndpointState(ep, overrides.get(ep["label"])) for ep in endpoints]
 
     print(f"Soundings starting — probing {len(states)} endpoints every {PROBE_INTERVAL}s")
     print(f"  Alert after {FAILURE_THRESHOLD} consecutive failures")
     print(f"  ntfy: {NTFY_URL}/{NTFY_TOPIC}")
     for s in states:
-        print(f"  - {s.label}: {s.url} (expect {s.expected_status})")
+        interval_note = f" (every {s.interval}s)" if s.interval != PROBE_INTERVAL else ""
+        print(f"  - {s.label}: {s.url} (expect {s.expected_status}){interval_note}")
 
     server = HTTPServer(("0.0.0.0", API_PORT), make_api_handler(states))
     api_thread = Thread(target=server.serve_forever, daemon=True)
@@ -249,9 +273,13 @@ def main():
     signal.signal(signal.SIGINT, handle_signal)
 
     while running:
+        now = time.monotonic()
         for state in states:
             if not running:
                 break
+            if now - state.last_probed < state.interval:
+                continue
+            state.last_probed = now
             result = probe(state)
 
             if result == "alert":

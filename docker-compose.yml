@@ -9,6 +9,7 @@ services:
       - NTFY_TOPIC=vela
       - PROBE_INTERVAL=60
       - FAILURE_THRESHOLD=3
+      - PROBE_INTERVAL_OVERRIDES=Wallabag:300
       - API_PORT=8591
       - >-
         ENDPOINTS=http://127.0.0.1:3001:Forgejo,
@@ -22,7 +23,8 @@ services:
         http://127.0.0.1:80:Homepage,
         http://127.0.0.1:2283:Immich,
         http://127.0.0.1:8080:Buda Bot,
-        http://127.0.0.1:3000:Blog
+        http://127.0.0.1:3000:Blog,
+        http://127.0.0.1:8586/health:Anchor
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8591/health', timeout=5)"]
       interval: 30s

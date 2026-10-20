@@ -18,7 +18,7 @@ services:
         http://127.0.0.1:3456:Vikunja,
         http://127.0.0.1:8384:Syncthing,
         http://127.0.0.1:3100/json/version:Browserless:401,
-        http://127.0.0.1:8585:Beacon,
+        http://127.0.0.1:8585/health:Beacon,
         http://127.0.0.1:8590:Dashboard,
         http://127.0.0.1:80:Homepage,
         http://127.0.0.1:2283:Immich,

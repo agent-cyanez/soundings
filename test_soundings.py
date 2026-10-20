@@ -256,5 +256,19 @@ class TestNotify(unittest.TestCase):
         self.assertEqual(self.received[0]["priority"], "high")
 
 
+class TestCapPriority(unittest.TestCase):
+    def test_no_cap_passes_through(self):
+        self.assertEqual(soundings.cap_priority("urgent", cap=""), "urgent")
+
+    def test_caps_high_and_urgent(self):
+        self.assertEqual(soundings.cap_priority("high", cap="default"), "default")
+        self.assertEqual(soundings.cap_priority("urgent", cap="default"), "default")
+        self.assertEqual(soundings.cap_priority("5", cap="high"), "high")
+
+    def test_leaves_lower_priorities_alone(self):
+        self.assertEqual(soundings.cap_priority("default", cap="default"), "default")
+        self.assertEqual(soundings.cap_priority("low", cap="default"), "low")
+
+
 if __name__ == "__main__":
     unittest.main()

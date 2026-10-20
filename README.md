@@ -17,6 +17,7 @@ Internal Docker healthchecks confirm "the app process responds to localhost insi
 | `FAILURE_THRESHOLD` | `3` | Consecutive failures before alerting |
 | `NTFY_URL` | `http://127.0.0.1:8888` | ntfy server URL |
 | `NTFY_TOPIC` | `vela` | ntfy topic for alerts |
+| `NTFY_MAX_PRIORITY` | *(none)* | Ceiling for alert priority (`min`, `low`, `default`, `high`, `urgent`). Set to `default` to keep high/urgent free for messages a human must see |
 | `API_PORT` | `8591` | Port for the JSON status API |
 | `PROBE_TIMEOUT` | `10` | HTTP request timeout in seconds |
 | `RECOVERY_NOTIFY` | `true` | Send notification when endpoint recovers |

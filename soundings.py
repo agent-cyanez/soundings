@@ -27,6 +27,27 @@ RECOVERY_NOTIFY = os.environ.get("RECOVERY_NOTIFY", "true").lower() == "true"
 API_PORT = int(os.environ.get("API_PORT", "8591"))
 PROBE_TIMEOUT = int(os.environ.get("PROBE_TIMEOUT", "10"))
 
+# ntfy priority ceiling. Set NTFY_MAX_PRIORITY (e.g. "default") to stop this
+# tool from ever sending high/urgent, so those levels stay reserved for
+# messages a human must see. Empty means no cap.
+_PRIORITY_LEVELS = {"min": 1, "low": 2, "default": 3, "high": 4, "urgent": 5, "max": 5,
+                    "1": 1, "2": 2, "3": 3, "4": 4, "5": 5}
+NTFY_MAX_PRIORITY = os.environ.get("NTFY_MAX_PRIORITY", "").strip().lower()
+if NTFY_MAX_PRIORITY and NTFY_MAX_PRIORITY not in _PRIORITY_LEVELS:
+    raise SystemExit(f"Invalid NTFY_MAX_PRIORITY: {NTFY_MAX_PRIORITY!r}")
+
+
+def cap_priority(priority, cap=None):
+    """Lower priority to the configured ceiling; leave it alone if under it."""
+    cap = NTFY_MAX_PRIORITY if cap is None else cap
+    if not cap:
+        return priority
+    level = _PRIORITY_LEVELS.get(str(priority).strip().lower())
+    if level is None or level <= _PRIORITY_LEVELS[cap]:
+        return priority
+    return cap
+
+
 
 def parse_endpoints(raw):
     """Parse ENDPOINTS env var into list of endpoint dicts.
@@ -192,7 +213,7 @@ def probe(state):
 
 def notify(title, message, priority="default", tags=None):
     url = f"{NTFY_URL}/{NTFY_TOPIC}"
-    headers = {"Title": title, "Priority": priority}
+    headers = {"Title": title, "Priority": cap_priority(priority)}
     if tags:
         headers["Tags"] = ",".join(tags)
     req = urllib.request.Request(url, data=message.encode(), headers=headers, method="POST")

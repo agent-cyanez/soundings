@@ -4,28 +4,16 @@ services:
     container_name: soundings
     restart: unless-stopped
     network_mode: host
+    env_file:
+      - path: .env
+        required: false
     environment:
       - NTFY_URL=http://127.0.0.1:8888
       - NTFY_TOPIC=vela
       - NTFY_MAX_PRIORITY=default
       - PROBE_INTERVAL=60
       - FAILURE_THRESHOLD=3
-      - PROBE_INTERVAL_OVERRIDES=Wallabag:300
       - API_PORT=8591
-      - >-
-        ENDPOINTS=http://127.0.0.1:3001:Forgejo,
-        http://127.0.0.1:8888:ntfy,
-        http://127.0.0.1:8082:Wallabag,
-        http://127.0.0.1:3456:Vikunja,
-        http://127.0.0.1:8384:Syncthing,
-        http://127.0.0.1:3100/json/version:Browserless:401,
-        http://127.0.0.1:8585/health:Beacon,
-        http://127.0.0.1:8590:Dashboard,
-        http://127.0.0.1:80:Homepage,
-        http://127.0.0.1:2283:Immich,
-        http://127.0.0.1:8080:Buda Bot,
-        http://127.0.0.1:3000:Blog,
-        http://127.0.0.1:8586/health:Anchor
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8591/health', timeout=5)"]
       interval: 30s
